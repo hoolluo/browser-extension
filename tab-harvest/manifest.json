@@ -1,0 +1,32 @@
+{
+    "manifest_version": 3,
+    "name": "标签页采集器",
+    "short_name": "TabHarvest",
+    "version": "1.1",
+    "author": "Ethan",
+    "description": "批量提取多个浏览器窗口中的网页文本，支持标签页选择、文本复制与 TXT 导出",
+    "permissions": [
+        "tabs",
+        "scripting"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "文本提取器",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "background": {
+        "service_worker": "background.js"
+    }
+}
