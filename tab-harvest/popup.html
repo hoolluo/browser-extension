@@ -172,38 +172,47 @@
         /* 提取范围 */
         .segmented {
             display: flex;
-            gap: 4px;
             margin-top: 12px;
-            padding: 4px;
-            border-radius: 11px;
-            background: var(--soft);
+            border-radius: 8px;
+            background: #f1f3f6;
+            overflow: hidden;
         }
 
         .seg-btn {
             flex: 1;
-            padding: 8px 0;
+            height: 34px;
+            padding: 0;
             border: none;
-            border-radius: 8px;
             background: transparent;
-            color: #334155;
+            color: #4b5563;
             font-size: 13px;
             cursor: pointer;
             transition: background .15s ease, color .15s ease;
         }
 
+        .seg-btn + .seg-btn {
+            border-left: 1px solid #dde2e8;
+        }
+
         .seg-btn:hover:not(.active):not(:disabled) {
-            background: #e2e8f0;
+            background: #e7ebf0;
         }
 
         .seg-btn.active {
-            background: var(--brand);
-            color: #fff;
+            background: #fff;
+            color: #111827;
             font-weight: 600;
+            border-radius: 7px;
+            box-shadow: inset 0 0 0 1px #d8dee6, 0 1px 2px rgba(16, 24, 40, .06);
+        }
+
+        .seg-btn.active + .seg-btn {
+            border-left-color: transparent;
         }
 
         .seg-btn:disabled {
             cursor: not-allowed;
-            opacity: .75;
+            opacity: .6;
         }
 
         /* 自定义链接 */
