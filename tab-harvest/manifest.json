@@ -7,7 +7,8 @@
     "description": "批量提取多个浏览器窗口中的网页文本，支持标签页选择、文本复制与 TXT 导出",
     "permissions": [
         "tabs",
-        "scripting"
+        "scripting",
+        "storage"
     ],
     "host_permissions": [
         "<all_urls>"
