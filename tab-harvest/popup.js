@@ -154,6 +154,8 @@ function refreshAutoScrollUI() {
   } else {
     newEls.autoScrollDesc.textContent = '自动滚动到底并等待内容稳定 (应用于全部标签页)';
   }
+
+  syncCustomSelects();
 }
 
 // ---------- 原有功能：页面文本提取 ----------
@@ -904,6 +906,172 @@ async function applySelectorToTabs() {
   }
 }
 
+// ---------- 自定义下拉（替代原生 select 外观，保留原有 value / change 契约） ----------
+const customSelects = [];
+
+function syncCustomSelects() {
+  customSelects.forEach((item) => item.sync());
+}
+
+function closeCustomDropdowns(except) {
+  customSelects.forEach((item) => {
+    if (item.dd !== except) item.close();
+  });
+}
+
+function enhanceSelect(select) {
+  if (!select || select.dataset.ddReady === '1') return;
+  select.dataset.ddReady = '1';
+  select.classList.add('dd-native');
+
+  const dd = document.createElement('div');
+  dd.className = 'dd';
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'dd-trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+
+  const valueText = document.createElement('span');
+  valueText.className = 'dd-value';
+
+  const arrow = document.createElement('span');
+  arrow.className = 'dd-arrow';
+  arrow.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+
+  trigger.append(valueText, arrow);
+
+  const menu = document.createElement('div');
+  menu.className = 'dd-menu';
+  menu.setAttribute('role', 'listbox');
+  menu.hidden = true;
+
+  dd.append(trigger, menu);
+  select.parentNode.insertBefore(dd, select);
+
+  const wrap = select.closest('.select-wrap');
+  if (wrap) wrap.classList.add('is-enhanced');
+
+  let activeIndex = -1;
+  const items = () => Array.from(menu.children);
+  const isOpen = () => !menu.hidden;
+
+  function setActive(index) {
+    activeIndex = index;
+    const list = items();
+    list.forEach((el, i) => el.classList.toggle('active', i === index));
+    const el = list[index];
+    if (!el) return;
+    const top = el.offsetTop;
+    const bottom = top + el.offsetHeight;
+    if (top < menu.scrollTop) menu.scrollTop = top;
+    else if (bottom > menu.scrollTop + menu.clientHeight) menu.scrollTop = bottom - menu.clientHeight;
+  }
+
+  function sync() {
+    const idx = select.selectedIndex;
+    const opt = select.options[idx];
+    valueText.textContent = opt ? opt.textContent : '请选择';
+    trigger.disabled = select.disabled;
+    items().forEach((el, i) => {
+      const on = i === idx;
+      el.classList.toggle('selected', on);
+      el.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    activeIndex = idx;
+  }
+
+  function rebuild() {
+    menu.replaceChildren();
+    Array.from(select.options).forEach((opt, index) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'dd-option';
+      item.setAttribute('role', 'option');
+
+      const text = document.createElement('span');
+      text.className = 'dd-option-text';
+      text.textContent = opt.textContent;
+
+      const check = document.createElement('span');
+      check.className = 'dd-check';
+      check.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+
+      item.append(text, check);
+      item.addEventListener('click', () => choose(index));
+      menu.appendChild(item);
+    });
+    sync();
+  }
+
+  function open() {
+    if (select.disabled || isOpen()) return;
+    closeCustomDropdowns(dd);
+    rebuild();
+    menu.hidden = false;
+    dd.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+    setActive(select.selectedIndex);
+  }
+
+  function close() {
+    if (!isOpen()) return;
+    menu.hidden = true;
+    dd.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function choose(index) {
+    const changed = select.selectedIndex !== index;
+    close();
+    trigger.focus();
+    if (index < 0 || index >= select.options.length) return;
+    select.selectedIndex = index;
+    sync();
+    if (changed) select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  trigger.addEventListener('click', () => (isOpen() ? close() : open()));
+
+  trigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen()) {
+        open();
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        choose(activeIndex);
+        return;
+      }
+      const max = items().length - 1;
+      const next = e.key === 'ArrowDown'
+        ? Math.min(max, activeIndex + 1)
+        : Math.max(0, activeIndex - 1);
+      setActive(next);
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      close();
+    }
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (isOpen() && !dd.contains(e.target)) close();
+  });
+
+  // options 或 disabled 变化时自动重新同步
+  new MutationObserver(() => (isOpen() ? sync() : rebuild()))
+    .observe(select, { childList: true, attributes: true, attributeFilter: ['disabled'] });
+
+  rebuild();
+  customSelects.push({ dd, close, sync });
+}
+
+function enhanceAllSelects() {
+  [els.windowSelect, newEls.cfgInterval, newEls.cfgWait, newEls.cfgMaxScroll, newEls.cfgTimeout]
+    .forEach(enhanceSelect);
+}
+
 // ---------- 事件绑定 ----------
 
 // 开始提取
@@ -1008,6 +1176,7 @@ newEls.selectorCloseBtn?.addEventListener('click', () => {
 // ---------- 初始化 ----------
 (async function init() {
   try {
+    enhanceAllSelects();
     await loadAutoScroll();
     await loadWindows();
     await checkPickerResult();
